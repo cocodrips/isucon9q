@@ -1079,7 +1079,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 			CreatedAt:                 item.CreatedAt.Unix(),
 		}
 
-		if *item.ReserveID != "" || *item.ShippingStatus != ShippingsStatusDone {
+		if item.ReserveID != nil || item.ShippingStatus != nil {
 			ssr, err := APIShipmentStatus(getShipmentServiceURL(), &APIShipmentStatusReq{
 				ReserveID: *item.ReserveID,
 			})
