@@ -21,6 +21,7 @@ import (
 	goji "goji.io"
 	"goji.io/pat"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -194,8 +195,8 @@ type resUserItems struct {
 }
 
 type resTransactions struct {
-	HasNext bool         `json:"has_next"`
-	Items   []ItemDetail `json:"items"`
+	HasNext bool          `json:"has_next"`
+	Items   []*ItemDetail `json:"items"`
 }
 
 type reqRegister struct {
@@ -1024,7 +1025,8 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	itemDetails := []ItemDetail{}
+	itemDetails := []*ItemDetail{}
+	eg := errgroup.Group{}
 
 	for _, item := range itemJoinedDetails {
 		category, err := getCategoryByID(tx, item.CategoryID)
@@ -1058,7 +1060,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 			shipingStatus = *item.ShippingStatus
 		}
 
-		itemDetail := ItemDetail{
+		itemDetail := &ItemDetail{
 			ID:       item.ID,
 			SellerID: item.SellerID,
 			Seller: &UserSimple{
@@ -1083,22 +1085,24 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 
 		// shippingStatusが doneのときは叩かない
 		if item.ReserveID != nil && !(item.ShippingStatus != nil && *item.ShippingStatus == ShippingsStatusDone) {
-			start := time.Now()
-			ssr, err := APIShipmentStatus(getShipmentServiceURL(), &APIShipmentStatusReq{
-				ReserveID: *item.ReserveID,
+			eg.Go(func() error {
+				ssr, err := APIShipmentStatus(getShipmentServiceURL(), &APIShipmentStatusReq{
+					ReserveID: *item.ReserveID,
+				})
+				if err == nil {
+					itemDetail.ShippingStatus = ssr.Status
+				}
+				return err
 			})
-			end := time.Now()
-
-			if err != nil {
-				log.Print(err)
-				outputErrorMsg(w, http.StatusInternalServerError, "failed to request to shipment service")
-				tx.Rollback()
-				return
-			}
-			fmt.Printf("%f秒\n", (end.Sub(start)).Seconds())
-			itemDetail.ShippingStatus = ssr.Status
 		}
 		itemDetails = append(itemDetails, itemDetail)
+	}
+
+	if err := eg.Wait(); err != nil {
+		log.Print(err)
+		outputErrorMsg(w, http.StatusInternalServerError, "failed to request to shipment service")
+		tx.Rollback()
+		return
 	}
 	tx.Commit()
 
