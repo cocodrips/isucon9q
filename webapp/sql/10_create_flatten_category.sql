@@ -1,3 +1,5 @@
+DROP TABLE IF EXISTS `category_flatten`;
+
 CREATE TABLE category_flatten AS
 (SELECT
   t3.id                    AS id,
