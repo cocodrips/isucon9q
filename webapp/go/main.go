@@ -1381,7 +1381,6 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 
 	if rb.CSRFToken != getCSRFToken(r) {
 		outputErrorMsg(w, http.StatusUnprocessableEntity, "csrf token error")
-
 		return
 	}
 
@@ -1486,6 +1485,7 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	start := time.Now()
 	scr, err := APIShipmentCreate(getShipmentServiceURL(), &APIShipmentCreateReq{
 		ToAddress:   buyer.Address,
 		ToName:      buyer.AccountName,
@@ -1500,6 +1500,12 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	end := time.Now()
+	fmt.Printf("APIShipmentCreate %f秒\n", (end.Sub(start)).Seconds())
+
+
+
+	start = time.Now()
 	pstr, err := APIPaymentToken(getPaymentServiceURL(), &APIPaymentServiceTokenReq{
 		ShopID: PaymentServiceIsucariShopID,
 		Token:  rb.Token,
@@ -1513,6 +1519,10 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 		tx.Rollback()
 		return
 	}
+
+	end = time.Now()
+	fmt.Printf("APIPaymentToken %f秒\n", (end.Sub(start)).Seconds())
+
 
 	if pstr.Status == "invalid" {
 		outputErrorMsg(w, http.StatusBadRequest, "カード情報に誤りがあります")
