@@ -5,7 +5,7 @@ CREATE TABLE category_flatten AS
   t3.id                    AS id,
   categories.id            AS parent_id,
   categories.category_name AS parent_name,
-  t3.category_child        AS name
+  t3.category_child        AS category_name
 FROM (SELECT
         id,
         parent_id,
