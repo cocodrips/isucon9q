@@ -13,7 +13,6 @@
 
     - name: cleanup log files
       shell: |
-        echo "" > /var/log/{{ app_server }}/access.log
-        echo "" > /var/log/{{ app_server }}/error.log
-        echo "" > /var/log/{{ database }}/access.log
-        echo "" > /var/log/{{ database }}/error.log
+        echo -n "" > /var/log/{{ app_server }}/access.log
+        echo -n "" > /var/log/{{ app_server }}/error.log
+        echo -n "" > /var/log/{{ database }}/mysql-slow.log
