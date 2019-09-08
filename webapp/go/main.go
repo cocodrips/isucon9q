@@ -1038,6 +1038,21 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		var transactionEvidenceID int64
+		if item.TransactionEvidenceID != nil {
+			transactionEvidenceID = *item.TransactionEvidenceID
+		}
+
+		var transactionEvidenceStatus = ""
+		if item.TransactionEvidenceStatus != nil {
+			transactionEvidenceStatus = *item.TransactionEvidenceStatus
+		}
+
+		var shipingStatus = ""
+		if item.ShippingStatus != nil {
+			shipingStatus = *item.ShippingStatus
+		}
+
 		itemDetail := ItemDetail{
 			ID:       item.ID,
 			SellerID: item.SellerID,
@@ -1054,9 +1069,9 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 			Description:               item.Description,
 			ImageURL:                  item.ImageURL,
 			CategoryID:                item.CategoryID,
-			TransactionEvidenceID:     *item.TransactionEvidenceID,
-			TransactionEvidenceStatus: *item.TransactionEvidenceStatus,
-			ShippingStatus:            *item.ShippingStatus,
+			TransactionEvidenceID:     transactionEvidenceID,
+			TransactionEvidenceStatus: transactionEvidenceStatus,
+			ShippingStatus:            shipingStatus,
 			Category:                  &category,
 			CreatedAt:                 item.CreatedAt.Unix(),
 		}
