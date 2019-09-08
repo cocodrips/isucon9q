@@ -4,6 +4,7 @@ import (
 	crand "crypto/rand"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io/ioutil"
@@ -319,6 +320,9 @@ func main() {
 		log.Fatalf("failed to connect to DB: %s.", err.Error())
 	}
 	defer dbx.Close()
+	dbx.DB.SetConnMaxLifetime(0)
+	dbx.DB.SetMaxIdleConns(64)
+	dbx.DB.SetMaxOpenConns(128)
 
 	mux := goji.NewMux()
 
@@ -1490,41 +1494,40 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	start := time.Now()
-	scr, err := APIShipmentCreate(getShipmentServiceURL(), &APIShipmentCreateReq{
-		ToAddress:   buyer.Address,
-		ToName:      buyer.AccountName,
-		FromAddress: seller.Address,
-		FromName:    seller.AccountName,
+	var scr *APIShipmentCreateRes
+	eg := errgroup.Group{}
+	eg.Go(func() error {
+		scr, err = APIShipmentCreate(getShipmentServiceURL(), &APIShipmentCreateReq{
+			ToAddress:   buyer.Address,
+			ToName:      buyer.AccountName,
+			FromAddress: seller.Address,
+			FromName:    seller.AccountName,
+		})
+		if err != nil {
+			return errors.New("failed to request to shipment service")
+		}
+		return nil
 	})
-	if err != nil {
-		log.Print(err)
-		outputErrorMsg(w, http.StatusInternalServerError, "failed to request to shipment service")
-		tx.Rollback()
 
+	var pstr *APIPaymentServiceTokenRes
+	eg.Go(func() error {
+		pstr, err = APIPaymentToken(getPaymentServiceURL(), &APIPaymentServiceTokenReq{
+			ShopID: PaymentServiceIsucariShopID,
+			Token:  rb.Token,
+			APIKey: PaymentServiceIsucariAPIKey,
+			Price:  targetItem.Price,
+		})
+		if err != nil {
+			return errors.New("payment service is failed")
+		}
+		return nil
+	})
+	if err := eg.Wait(); err != nil {
+		log.Print(err)
+		outputErrorMsg(w, http.StatusInternalServerError, err.Error())
+		tx.Rollback()
 		return
 	}
-
-	end := time.Now()
-	fmt.Printf("APIShipmentCreate %f秒\n", (end.Sub(start)).Seconds())
-
-	start = time.Now()
-	pstr, err := APIPaymentToken(getPaymentServiceURL(), &APIPaymentServiceTokenReq{
-		ShopID: PaymentServiceIsucariShopID,
-		Token:  rb.Token,
-		APIKey: PaymentServiceIsucariAPIKey,
-		Price:  targetItem.Price,
-	})
-	if err != nil {
-		log.Print(err)
-
-		outputErrorMsg(w, http.StatusInternalServerError, "payment service is failed")
-		tx.Rollback()
-		return
-	}
-
-	end = time.Now()
-	fmt.Printf("APIPaymentToken %f秒\n", (end.Sub(start)).Seconds())
 
 	if pstr.Status == "invalid" {
 		outputErrorMsg(w, http.StatusBadRequest, "カード情報に誤りがあります")
