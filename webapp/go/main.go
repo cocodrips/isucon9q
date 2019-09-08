@@ -853,8 +853,6 @@ func getUserItems(w http.ResponseWriter, r *http.Request) {
 }
 
 func getTransactions(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("getTransactions")
-
 	user, errCode, errMsg := getUser(r)
 	if errMsg != "" {
 		outputErrorMsg(w, errCode, errMsg)
@@ -941,7 +939,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 			itemID,
 			TransactionsPerPage+1,
 		)
-		fmt.Printf("details #%v", itemJoinedDetails)
+
 		if err != nil {
 			log.Print(err)
 			outputErrorMsg(w, http.StatusInternalServerError, "db error")
@@ -987,7 +985,6 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-	fmt.Println("item joined", itemJoinedDetails)
 
 	itemDetails := []ItemDetail{}
 
@@ -1026,12 +1023,12 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 			CategoryID:                item.CategoryID,
 			TransactionEvidenceID:     item.TransactionEvidenceID,
 			TransactionEvidenceStatus: item.TransactionEvidenceStatus,
-			// ShippingStatus
-			Category:  &category,
-			CreatedAt: item.CreatedAt.Unix(),
+			ShippingStatus:            item.ShippingStatus,
+			Category:                  &category,
+			CreatedAt:                 item.CreatedAt.Unix(),
 		}
 
-		if item.ReserveID != "" {
+		if item.ReserveID != "" || item.ShippingStatus != "done" {
 			ssr, err := APIShipmentStatus(getShipmentServiceURL(), &APIShipmentStatusReq{
 				ReserveID: item.ReserveID,
 			})
@@ -1043,8 +1040,6 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			itemDetail.ShippingStatus = ssr.Status
-		} else {
-			itemDetail.ShippingStatus = ""
 		}
 		itemDetails = append(itemDetails, itemDetail)
 	}
