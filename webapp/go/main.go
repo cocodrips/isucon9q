@@ -410,9 +410,7 @@ func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err
 // TODO 再帰でやってる怖い
 func getCategoryByID(q sqlx.Queryer, categoryID int) (category Category, err error) {
 	//err = sqlx.Get(q, &category, "SELECT * FROM `categories` WHERE `id` = ?", categoryID)
-	fmt.Printf("category id: %v", categoryID)
 	err = sqlx.Get(q, &category, "SELECT * FROM `category_flatten` WHERE `id` = ?", categoryID)
-	fmt.Printf("category: %v %v parent %v", category.ID, category.CategoryName, category.ParentCategoryName)
 	//
 	//if category.ParentID != 0 {
 	//	parentCategory, err := getCategoryByID(q, category.ParentID)
