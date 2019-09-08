@@ -24,7 +24,7 @@
       become: true
       copy:
         src: ../configs/mysql.cnf
-        dest: /etc/mysql/conf.d/mysql.cnf
+        dest: /etc/mysql/mysql.conf.d/mysqld.cnf
 
     # Restart service
     - name: restart mysql
