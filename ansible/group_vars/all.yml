@@ -1,4 +1,4 @@
 app_server: nginx
 database: mysql
-repository_root: /home/isucon/isucon-base
+repository_root: /home/isucon/isucari
 branch: master

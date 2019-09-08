@@ -13,10 +13,41 @@
       environment:
         - BRANCH: "{{ branch }}"
 
+    # Update configs
     - name: replace nginx conf
       become: true
       copy:
-        src: config/nginx.conf
-        dest: /etc/nginx/nginx.conf
+        src: configs/isucari.conf
+        dest: /etc/nginx/sites-available/isucari.conf
 
+    - name: replace mysql conf
+      become: true
+      copy:
+        src: configs/mysql.cnf
+        dest: /etc/mysql/conf.d/mysql.cnf
+
+    # Restart service
+    - name: restart mysql
+      become: true
+      systemd:
+          name: imysql.service
+          state: restarted
+          daemon_reload: yes
+          enabled: yes
+
+    - name: restart nginx
+      become: true
+      systemd:
+          name: nginx.service
+          state: restarted
+          daemon_reload: yes
+          enabled: yes
+
+    - name: restart service
+      become: true
+      systemd:
+          name: isucari.golang.service
+          state: restarted
+          daemon_reload: yes
+          enabled: yes
 
