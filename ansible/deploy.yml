@@ -1,0 +1,22 @@
+- name: deploy
+  hosts: all
+  remote_user: isucon
+
+  tasks:
+    - name: pull repository
+      shell: |
+        git fetch origin
+        git checkout $BRANCH
+        git pull origin $BRANCH
+      args:
+        chdir: "{{ repository_root }}"
+      environment:
+        - BRANCH: "{{ branch }}"
+
+    - name: replace nginx conf
+      become: true
+      copy:
+        src: config/nginx.conf
+        dest: /etc/nginx/nginx.conf
+
+

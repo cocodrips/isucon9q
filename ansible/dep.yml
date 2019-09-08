@@ -1,0 +1,53 @@
+- name: dep
+  hosts: all
+  remote_user: isucon
+
+  tasks:
+    - name: install
+      apt: name={{ item }} update_cache=yes cache_valid_time=3600
+      become: yes
+      with_items:
+        - htop
+        - dstat
+        - wget
+        - unzip
+        - emacs
+        - vim
+        - git
+        - tree
+
+    - name: setup github user.name
+      shell: "git config --global user.name 'isucon'"
+
+    - name: setup github user.email
+      shell: "git config --global user.email isucon@contest"
+
+    - name: download alp
+      get_url:
+        url: https://github.com/tkuchiki/alp/releases/download/v1.0.0/alp_linux_amd64.zip
+        dest: /tmp/alp_linux_amd64.zip
+
+    - name: install alp
+      become: yes
+      shell: "unzip alp_linux_amd64.zip && mv alp /usr/bin/alp && chmod +x /usr/bin/alp"
+      args:
+        chdir: /tmp
+        creates: alp
+
+    - name: download percona-toolkit
+      shell: "wget https://repo.percona.com/apt/percona-release_latest.$(lsb_release -sc)_all.deb -O percona.deb"
+      args:
+        chdir: /tmp
+        creates: percona.deb
+
+    - name: package percona-toolkit
+      become: yes
+      shell: "dpkg -i percona.deb"
+      args:
+       chdir: /tmp
+
+    - name: install percona-toolkit
+      apt: name={{ item }} update_cache=yes cache_valid_time=3600
+      become: yes
+      with_items:
+        - percona-toolkit

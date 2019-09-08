@@ -1,0 +1,22 @@
+- name: setup-ssh
+  hosts: server1
+  remote_user: isucon
+
+  vars:
+    summary: /tmp/summary.txt
+
+  tasks:
+    - name: create summary
+      shell: |
+        echo "==========ALP============" > {{ summary }}
+        echo "==========SLOW LOG============" >> {{ summary }}
+
+    - name: post summary
+      shell: |
+        curl -F file=@{{ summary }} -F channels=#practice -F token=$SLACK_TOKEN -F filename=$(git rev-parse --short HEAD).txt  https://slack.com/api/files.upload
+      environment:
+        SLACK_TOKEN: "{{ lookup('env', 'WANKO_SLACK_TOKEN') }}"
+      args:
+        chdir: "{{ repository_root }}"
+
+

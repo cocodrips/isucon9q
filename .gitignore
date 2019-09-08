@@ -1,0 +1,3 @@
+ansible/hosts
+ansible/secret
+ansible/*.retry
