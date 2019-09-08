@@ -411,6 +411,7 @@ func getUserSimpleByID(q sqlx.Queryer, userID int64) (userSimple UserSimple, err
 func getCategoryByID(q sqlx.Queryer, categoryID int) (category Category, err error) {
 	//err = sqlx.Get(q, &category, "SELECT * FROM `categories` WHERE `id` = ?", categoryID)
 	err = sqlx.Get(q, &category, "SELECT * FROM `category_flatten` WHERE `id` = ?", categoryID)
+
 	//
 	//if category.ParentID != 0 {
 	//	parentCategory, err := getCategoryByID(q, category.ParentID)
@@ -581,7 +582,6 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// 1st page
 		// TODO statusとcreated_atにindex貼ってるか
-		items := []ItemAll{}
 		err := dbx.Select(&items,
 			"SELECT "+
 				" items.id, seller_id, status, name, price, image_name, category_id, items.created_at, "+
@@ -601,6 +601,7 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
+
 	for _, item := range items {
 		itemSimples = append(itemSimples, ItemSimple{
 			ID:       item.ID,
@@ -651,6 +652,8 @@ func getNewCategoryItems(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rootCategory, err := getCategoryByID(dbx, rootCategoryID)
+	//fmt.Printf("category: %d, parent: %d\n", rootCategory.ID, rootCategory.ParentID)
+	//fmt.Printf("err: %v", err)
 	if err != nil || rootCategory.ParentID != 0 {
 		outputErrorMsg(w, http.StatusNotFound, "category not found")
 		return

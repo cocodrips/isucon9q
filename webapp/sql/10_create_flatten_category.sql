@@ -14,3 +14,4 @@ FROM (SELECT
 
 ALTER TABLE category_flatten ADD PRIMARY KEY(id);
 Update category_flatten set parent_id = 0 where parent_id IS NULL;
+Update category_flatten set parent_name = "" where parent_name IS NULL;
