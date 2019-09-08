@@ -1079,10 +1079,13 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 			CreatedAt:                 item.CreatedAt.Unix(),
 		}
 
-		if item.ReserveID != nil || item.ShippingStatus != nil {
+		// shippingStatusが doneのときは叩かない
+		if item.ReserveID != nil || !(item.ShippingStatus != nil && *item.ShippingStatus == ShippingsStatusDone) {
+			start := time.Now()
 			ssr, err := APIShipmentStatus(getShipmentServiceURL(), &APIShipmentStatusReq{
 				ReserveID: *item.ReserveID,
 			})
+			end := time.Now()
 
 			if err != nil {
 				log.Print(err)
@@ -1090,6 +1093,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 				tx.Rollback()
 				return
 			}
+			fmt.Printf("%f秒\n", (end.Sub(start)).Seconds())
 			itemDetail.ShippingStatus = ssr.Status
 		}
 		itemDetails = append(itemDetails, itemDetail)
