@@ -3,4 +3,4 @@ export GO111MODULE=on
 all: isucari
 
 isucari: *.go
-	go build -o isucari
+	/home/isucon/local/go/bin/go build -o isucari

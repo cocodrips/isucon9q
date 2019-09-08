@@ -26,8 +26,8 @@ import (
 const (
 	sessionName = "session_isucari"
 
-	DefaultPaymentServiceURL  = "http://localhost:5555"
-	DefaultShipmentServiceURL = "http://localhost:7000"
+	DefaultPaymentServiceURL  = "https://payment.isucon9q.catatsuy.org"
+	DefaultShipmentServiceURL = "https://shipment.isucon9q.catatsuy.org"
 
 	ItemMinPrice    = 100
 	ItemMaxPrice    = 1000000
@@ -500,7 +500,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 
 	res := resInitialize{
 		// キャンペーン実施時には還元率の設定を返す。詳しくはマニュアルを参照のこと。
-		Campaign: 0,
+		Campaign: 2,
 		// 実装言語を返す
 		Language: "Go",
 	}
@@ -889,7 +889,6 @@ func getUserItems(w http.ResponseWriter, r *http.Request) {
 }
 
 func getTransactions(w http.ResponseWriter, r *http.Request) {
-
 	user, errCode, errMsg := getUser(r)
 	if errMsg != "" {
 		outputErrorMsg(w, errCode, errMsg)
@@ -919,24 +918,64 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tx := dbx.MustBegin()
-	items := []Item{}
+	type itemJoinedDetail struct {
+		ID                        int64     `db:"id"`
+		SellerID                  int64     `db:"seller_id"`
+		BuyerID                   int64     `db:"buyer_id,omitempty"`
+		Status                    string    `db:"status"`
+		Name                      string    `db:"name"`
+		Price                     int       `db:"price"`
+		CategoryID                int       `db:"category_id"`
+		Description               string    `db:"description"`
+		ImageURL                  string    `db:"image_url"`
+		CreatedAt                 time.Time `db:"created_at"`
+		SellerName                string    `db:"seller_name"`
+		SellerNumItems            int       `db:"seller_num_items"`
+		BuyerName                 string    `db:"buyer_name"`
+		BuyerNumItems             int       `db:"buyer_num_items"`
+		TransactionEvidenceID     int64     `db:"transaction_evidence_id,omitempty"`
+		TransactionEvidenceStatus string    `db:"transaction_evidence_status,omitempty"`
+		ShippingStatus            string    `db:"shipping_status,omitempty"`
+		ReserveID                 string    `db:"reserve_id"`
+	}
+
+	itemJoinedDetails := []itemJoinedDetail{}
+
 	if itemID > 0 && createdAt > 0 {
-		// paging
-		// TODO buyer_idとseller_idとstatusにindexはってあるか
-		err := tx.Select(&items,
-			"SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?) AND `status` IN (?,?,?,?,?) AND (`created_at` < ?  OR (`created_at` <= ? AND `id` < ?)) ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
+		detailsQuery := `SELECT
+				   items.id
+				 , items.seller_id
+				 , items.buyer_id
+				 , items.status
+				 , items.name
+				 , items.price
+				 , items.category_id
+				 , items.description
+				 , concat('/upload/', items.image_name) as image_url
+				 , items.created_at
+				 , ua.account_name as seller_name
+				 , ua.num_sell_items as seller_num_items
+				 , ub.account_name as buyer_name
+				 , ub.num_sell_items as buyer_num_items
+				 , te.id as transaction_evidence_id
+				 , te.status as transaction_evidence_status
+				 , sp.status as shipping_status
+				 , sp.reserve_id
+			FROM items
+					 left join users ua on items.seller_id = ua.id
+					 left join users ub on items.buyer_id = ub.id
+					 left join transaction_evidences te on items.id = te.item_id
+					 left join shippings sp on te.id = sp.transaction_evidence_id
+			WHERE (items.seller_id = ? OR  items.buyer_id = ?) AND (items.created_at < ?  OR (items.created_at <= ? AND items.id < ?)) ORDER BY items.created_at DESC, items.id DESC LIMIT ?;`
+		err := tx.Select(&itemJoinedDetails, detailsQuery,
 			user.ID,
 			user.ID,
-			ItemStatusOnSale,
-			ItemStatusTrading,
-			ItemStatusSoldOut,
-			ItemStatusCancel,
-			ItemStatusStop,
 			time.Unix(createdAt, 0),
 			time.Unix(createdAt, 0),
 			itemID,
 			TransactionsPerPage+1,
 		)
+
 		if err != nil {
 			log.Print(err)
 			outputErrorMsg(w, http.StatusInternalServerError, "db error")
@@ -944,35 +983,48 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		// 1st page
-		// TODO buyer_idとseller_idとstatusにindexはってあるか
-		err := tx.Select(&items,
-			"SELECT * FROM `items` WHERE (`seller_id` = ? OR `buyer_id` = ?) AND `status` IN (?,?,?,?,?) ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
+		detailsQuery := `SELECT
+				   items.id
+				 , items.seller_id
+				 , items.buyer_id
+				 , items.status
+				 , items.name
+				 , items.price
+				 , items.category_id
+				 , items.description
+				 , concat('/upload/', items.image_name) as image_url
+				 , items.created_at
+				 , ua.account_name as seller_name
+				 , ua.num_sell_items as seller_num_items
+				 , ub.account_name as buyer_name
+				 , ub.num_sell_items as buyer_num_items
+				 , te.id as transaction_evidence_id
+				 , te.status as transaction_evidence_status
+				 , sp.status as shipping_status
+				 , sp.reserve_id
+			FROM items
+					 left join users ua on items.seller_id = ua.id
+					 left join users ub on items.buyer_id = ub.id
+					 left join transaction_evidences te on items.id = te.item_id
+					 left join shippings sp on te.id = sp.transaction_evidence_id
+			WHERE (items.seller_id = ? OR items.buyer_id = ?) ORDER BY items.created_at DESC, items.id DESC LIMIT ?;`
+
+		err := tx.Select(&itemJoinedDetails, detailsQuery,
 			user.ID,
 			user.ID,
-			ItemStatusOnSale,
-			ItemStatusTrading,
-			ItemStatusSoldOut,
-			ItemStatusCancel,
-			ItemStatusStop,
-			TransactionsPerPage+1,
-		)
+			TransactionsPerPage+1)
 		if err != nil {
 			log.Print(err)
 			outputErrorMsg(w, http.StatusInternalServerError, "db error")
 			tx.Rollback()
 			return
 		}
+
 	}
 
 	itemDetails := []ItemDetail{}
-	for _, item := range items {
-		seller, err := getUserSimpleByID(tx, item.SellerID)
-		if err != nil {
-			outputErrorMsg(w, http.StatusNotFound, "seller not found")
-			tx.Rollback()
-			return
-		}
+
+	for _, item := range itemJoinedDetails {
 		category, err := getCategoryByID(tx, item.CategoryID)
 		if err != nil {
 			outputErrorMsg(w, http.StatusNotFound, "category not found")
@@ -980,80 +1032,53 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		var buyer *UserSimple
+		if item.BuyerID != 0 {
+			buyer = &UserSimple{
+				ID:           item.BuyerID,
+				AccountName:  item.BuyerName,
+				NumSellItems: item.BuyerNumItems,
+			}
+		}
+
 		itemDetail := ItemDetail{
 			ID:       item.ID,
 			SellerID: item.SellerID,
-			Seller:   &seller,
-			// BuyerID
-			// Buyer
-			Status:      item.Status,
-			Name:        item.Name,
-			Price:       item.Price,
-			Description: item.Description,
-			ImageURL:    getImageURL(item.ImageName),
-			CategoryID:  item.CategoryID,
-			// TransactionEvidenceID
-			// TransactionEvidenceStatus
-			// ShippingStatus
-			Category:  &category,
-			CreatedAt: item.CreatedAt.Unix(),
+			Seller: &UserSimple{
+				ID:           item.SellerID,
+				AccountName:  item.Name,
+				NumSellItems: item.SellerNumItems,
+			},
+			BuyerID:                   item.BuyerID,
+			Buyer:                     buyer,
+			Status:                    item.Status,
+			Name:                      item.Name,
+			Price:                     item.Price,
+			Description:               item.Description,
+			ImageURL:                  item.ImageURL,
+			CategoryID:                item.CategoryID,
+			TransactionEvidenceID:     item.TransactionEvidenceID,
+			TransactionEvidenceStatus: item.TransactionEvidenceStatus,
+			ShippingStatus:            item.ShippingStatus,
+			Category:                  &category,
+			CreatedAt:                 item.CreatedAt.Unix(),
 		}
 
-		if item.BuyerID != 0 {
-			buyer, err := getUserSimpleByID(tx, item.BuyerID)
-			if err != nil {
-				outputErrorMsg(w, http.StatusNotFound, "buyer not found")
-				tx.Rollback()
-				return
-			}
-			itemDetail.BuyerID = item.BuyerID
-			itemDetail.Buyer = &buyer
-		}
-
-		transactionEvidence := TransactionEvidence{}
-		// TODO item_idにindex貼ってあるか
-		err = tx.Get(&transactionEvidence, "SELECT * FROM `transaction_evidences` WHERE `item_id` = ?", item.ID)
-		if err != nil && err != sql.ErrNoRows {
-			// It's able to ignore ErrNoRows
-			log.Print(err)
-			outputErrorMsg(w, http.StatusInternalServerError, "db error")
-			tx.Rollback()
-			return
-		}
-
-		if transactionEvidence.ID > 0 {
-			shipping := Shipping{}
-			// TODO transaction_evidence_idにindex貼ってあるか
-			err = tx.Get(&shipping, "SELECT * FROM `shippings` WHERE `transaction_evidence_id` = ?", transactionEvidence.ID)
-			if err == sql.ErrNoRows {
-				outputErrorMsg(w, http.StatusNotFound, "shipping not found")
-				tx.Rollback()
-				return
-			}
-			if err != nil {
-				log.Print(err)
-				outputErrorMsg(w, http.StatusInternalServerError, "db error")
-				tx.Rollback()
-				return
-			}
+		if item.ReserveID != "" || item.ShippingStatus != "done" {
 			ssr, err := APIShipmentStatus(getShipmentServiceURL(), &APIShipmentStatusReq{
-				ReserveID: shipping.ReserveID,
+				ReserveID: item.ReserveID,
 			})
+
 			if err != nil {
 				log.Print(err)
 				outputErrorMsg(w, http.StatusInternalServerError, "failed to request to shipment service")
 				tx.Rollback()
 				return
 			}
-
-			itemDetail.TransactionEvidenceID = transactionEvidence.ID
-			itemDetail.TransactionEvidenceStatus = transactionEvidence.Status
 			itemDetail.ShippingStatus = ssr.Status
 		}
-
 		itemDetails = append(itemDetails, itemDetail)
 	}
-	tx.Commit()
 
 	hasNext := false
 	if len(itemDetails) > TransactionsPerPage {
