@@ -931,6 +931,9 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		Description               string    `db:"description"`
 		ImageURL                  string    `db:"image_url"`
 		CreatedAt                 time.Time `db:"created_at"`
+		CategoryParentID          int       `db:"category_parent_id"`
+		CategoryParentName        string    `db:"category_parent_name"`
+		CategoryName              string    `db:"category_name"`
 		SellerName                string    `db:"seller_name"`
 		SellerNumItems            int       `db:"seller_num_items"`
 		BuyerName                 *string   `db:"buyer_name"`
@@ -955,6 +958,9 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 				 , items.description
 				 , concat('/upload/', items.image_name) as image_url
 				 , items.created_at
+				 , cf.parent_id as category_parent_id
+				 , cf.parent_name as category_parent_name
+				 , cf.category_name as category_name
 				 , ua.account_name as seller_name
 				 , ua.num_sell_items as seller_num_items
 				 , ub.account_name as buyer_name
@@ -968,6 +974,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 					 left join users ub on items.buyer_id = ub.id
 					 left join transaction_evidences te on items.id = te.item_id
 					 left join shippings sp on te.id = sp.transaction_evidence_id
+					 left join category_flatten cf on items.category_id = cf.id
 			WHERE (items.seller_id = ? OR  items.buyer_id = ?) AND (items.created_at < ?  OR (items.created_at <= ? AND items.id < ?)) ORDER BY items.created_at DESC, items.id DESC LIMIT ?;`
 		err := tx.Select(&itemJoinedDetails, detailsQuery,
 			user.ID,
@@ -996,6 +1003,9 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 				 , items.description
 				 , concat('/upload/', items.image_name) as image_url
 				 , items.created_at
+				 , cf.parent_id as category_parent_id
+				 , cf.parent_name as category_parent_name
+				 , cf.category_name as category_name
 				 , ua.account_name as seller_name
 				 , ua.num_sell_items as seller_num_items
 				 , ub.account_name as buyer_name
@@ -1009,6 +1019,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 					 left join users ub on items.buyer_id = ub.id
 					 left join transaction_evidences te on items.id = te.item_id
 					 left join shippings sp on te.id = sp.transaction_evidence_id
+					 left join category_flatten cf on items.category_id = cf.id
 			WHERE (items.seller_id = ? OR items.buyer_id = ?) ORDER BY items.created_at DESC, items.id DESC LIMIT ?;`
 
 		err := tx.Select(&itemJoinedDetails, detailsQuery,
@@ -1027,12 +1038,12 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 	itemDetails := []ItemDetail{}
 
 	for _, item := range itemJoinedDetails {
-		category, err := getCategoryByID(tx, item.CategoryID)
-		if err != nil {
-			outputErrorMsg(w, http.StatusNotFound, "category not found")
-			tx.Rollback()
-			return
-		}
+		//category, err := getCategoryByID(tx, item.CategoryID)
+		//if err != nil {
+		//	outputErrorMsg(w, http.StatusNotFound, "category not found")
+		//	tx.Rollback()
+		//	return
+		//}
 
 		var buyer *UserSimple
 		if item.BuyerID != 0 {
@@ -1077,8 +1088,13 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 			TransactionEvidenceID:     transactionEvidenceID,
 			TransactionEvidenceStatus: transactionEvidenceStatus,
 			ShippingStatus:            shipingStatus,
-			Category:                  &category,
-			CreatedAt:                 item.CreatedAt.Unix(),
+			Category: &Category{
+				ID:                 item.CategoryID,
+				ParentID:           item.CategoryParentID,
+				CategoryName:       item.CategoryParentName,
+				ParentCategoryName: item.CategoryName,
+			},
+			CreatedAt: item.CreatedAt.Unix(),
 		}
 
 		// shippingStatusが doneのときは叩かない
