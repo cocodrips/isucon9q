@@ -9,11 +9,13 @@
     - name: create summary
       shell: |
         echo "==========ALP============" > {{ summary }}
+        cat /var/log/nginx/access.log | alp ltsv -r -m '/items/[0-9]+.json','/new_items/[0-9]+.json','/users/[0-9]+.json','/upload/[a-z0-9]+.jpg','/transactions/[0-9]+.png','/static/*' >> {{ summary }}
         echo "==========SLOW LOG============" >> {{ summary }}
+        pt-query-digest /var/log/mysql/mysql-slow.log --explain h=127.0.0.1,u=isucari,p=isucari >> {{ summary }}
 
     - name: post summary
       shell: |
-        curl -F file=@{{ summary }} -F channels=#practice -F token=$SLACK_TOKEN -F filename=$(git rev-parse --short HEAD).txt  https://slack.com/api/files.upload
+        curl -F file=@{{ summary }} -F channels=#general -F token=$SLACK_TOKEN -F filename=$(git rev-parse --short HEAD).txt  https://slack.com/api/files.upload
       environment:
         SLACK_TOKEN: "{{ lookup('env', 'WANKO_SLACK_TOKEN') }}"
       args:
