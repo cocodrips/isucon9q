@@ -425,7 +425,6 @@ func getCategoryByID(q sqlx.Queryer, categoryID int) (category Category, err err
 
 func getConfigByName(name string) (string, error) {
 	config := Config{}
-	// TODO nameにindex貼ってあるかcheck
 	err := dbx.Get(&config, "SELECT * FROM `configs` WHERE `name` = ?", name)
 	if err == sql.ErrNoRows {
 		return "", nil
@@ -498,7 +497,7 @@ func postInitialize(w http.ResponseWriter, r *http.Request) {
 
 	res := resInitialize{
 		// キャンペーン実施時には還元率の設定を返す。詳しくはマニュアルを参照のこと。
-		Campaign: 2,
+		Campaign: 0,
 		// 実装言語を返す
 		Language: "Go",
 	}
@@ -1062,7 +1061,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 			CreatedAt:                 item.CreatedAt.Unix(),
 		}
 
-		if item.ReserveID != "" || item.ShippingStatus != "done" {
+		if item.ReserveID != "" || item.ShippingStatus != ShippingsStatusDone {
 			ssr, err := APIShipmentStatus(getShipmentServiceURL(), &APIShipmentStatusReq{
 				ReserveID: item.ReserveID,
 			})
@@ -1077,6 +1076,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		}
 		itemDetails = append(itemDetails, itemDetail)
 	}
+	tx.Commit()
 
 	hasNext := false
 	if len(itemDetails) > TransactionsPerPage {
