@@ -532,12 +532,42 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	items := []Item{}
+	type ItemAll struct {
+		ID          int64     `db:"id"`
+		SellerID    int64     `db:"seller_id"`
+		BuyerID     int64     `db:"buyer_id"`
+		Status      string    `db:"status"`
+		Name        string    `db:"name"`
+		Description string    `db:"description"`
+		Price       int       `db:"price"`
+		ImageName   string    `db:"image_name"`
+		CategoryID  int       `db:"category_id"`
+		CreatedAt   time.Time `db:"created_at"`
+		UpdatedAt   time.Time `db:"updated_at"`
+
+		CategoryName string `db:"category_name"`
+		ParentName   string `db:"parent_name"`
+
+		AccountName  string `db:"account_name"`
+		NumSellItems int    `db:"num_sell_items"`
+	}
+
+	items := []ItemAll{}
+	itemSimples := []ItemSimple{}
+
 	if itemID > 0 && createdAt > 0 {
 		// paging
 		// TODO statusとcreated_atにindex貼ってるか
+
 		err := dbx.Select(&items,
-			"SELECT * FROM `items` WHERE `status` IN (?,?) AND (`created_at` < ?  OR (`created_at` <= ? AND `id` < ?)) ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
+			"SELECT "+
+				" items.id, seller_id, status, name, price, image_name, category_id, items.created_at, "+
+				" category_id, category_name, parent_name, seller_id, account_name, num_sell_items "+
+				"FROM items "+
+				" LEFT JOIN `users` ON items.seller_id = users.id "+
+				" LEFT JOIN `category_flatten` ON items.category_id = category_flatten.id "+
+				"WHERE items.status IN (?,?) AND (items.created_at < ?  OR (items.created_at <= ? AND items.id < ?))"+
+				" ORDER BY items.created_at DESC, items.id DESC LIMIT ?",
 			ItemStatusOnSale,
 			ItemStatusSoldOut,
 			time.Unix(createdAt, 0),
@@ -545,6 +575,7 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 			itemID,
 			ItemsPerPage+1,
 		)
+
 		if err != nil {
 			log.Print(err)
 			outputErrorMsg(w, http.StatusInternalServerError, "db error")
@@ -553,8 +584,15 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// 1st page
 		// TODO statusとcreated_atにindex貼ってるか
+		items := []ItemAll{}
 		err := dbx.Select(&items,
-			"SELECT * FROM `items` WHERE `status` IN (?,?) ORDER BY `created_at` DESC, `id` DESC LIMIT ?",
+			"SELECT "+
+				" items.id, seller_id, status, name, price, image_name, category_id, items.created_at, "+
+				" category_id, category_name, parent_name, seller_id, account_name, num_sell_items "+
+				"FROM items "+
+				"LEFT JOIN users ON items.seller_id = users.id "+
+				"LEFT JOIN category_flatten ON items.category_id = category_flatten.id "+
+				"WHERE items.status IN (?,?) ORDER BY items.created_at DESC, items.id DESC LIMIT ?",
 			ItemStatusOnSale,
 			ItemStatusSoldOut,
 			ItemsPerPage+1,
@@ -564,33 +602,31 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 			outputErrorMsg(w, http.StatusInternalServerError, "db error")
 			return
 		}
-	}
 
-	itemSimples := []ItemSimple{}
+	}
 	for _, item := range items {
-		// TODO itemでfor回すのやめたい
-		seller, err := getUserSimpleByID(dbx, item.SellerID)
-		if err != nil {
-			outputErrorMsg(w, http.StatusNotFound, "seller not found")
-			return
-		}
-		// TODO itemでfor回すのやめたい
-		category, err := getCategoryByID(dbx, item.CategoryID)
-		if err != nil {
-			outputErrorMsg(w, http.StatusNotFound, "category not found")
-			return
-		}
 		itemSimples = append(itemSimples, ItemSimple{
-			ID:         item.ID,
-			SellerID:   item.SellerID,
-			Seller:     &seller,
+			ID:       item.ID,
+			SellerID: item.SellerID,
+
 			Status:     item.Status,
 			Name:       item.Name,
 			Price:      item.Price,
 			ImageURL:   getImageURL(item.ImageName),
 			CategoryID: item.CategoryID,
-			Category:   &category,
-			CreatedAt:  item.CreatedAt.Unix(),
+
+			CreatedAt: item.CreatedAt.Unix(),
+
+			Category: &Category{
+				ID:                 item.CategoryID,
+				CategoryName:       item.CategoryName,
+				ParentCategoryName: item.ParentName,
+			},
+			Seller: &UserSimple {
+				ID           : item.SellerID,
+				AccountName  : item.AccountName,
+				NumSellItems : item.NumSellItems,
+			},
 		})
 	}
 
