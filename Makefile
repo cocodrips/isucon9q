@@ -1,7 +1,7 @@
 dep:
 	ansible-playbook -v ansible/dep.yml
 
-deploy:
+deploy: clean
 	ansible-playbook -v ansible/deploy.yml
 
 clean:

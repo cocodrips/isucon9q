@@ -17,20 +17,20 @@
     - name: replace nginx conf
       become: true
       copy:
-        src: configs/isucari.conf
+        src: ../configs/isucari.conf
         dest: /etc/nginx/sites-available/isucari.conf
 
     - name: replace mysql conf
       become: true
       copy:
-        src: configs/mysql.cnf
+        src: ../configs/mysql.cnf
         dest: /etc/mysql/conf.d/mysql.cnf
 
     # Restart service
     - name: restart mysql
       become: true
       systemd:
-          name: imysql.service
+          name: mysql.service
           state: restarted
           daemon_reload: yes
           enabled: yes
