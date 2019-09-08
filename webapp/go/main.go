@@ -542,6 +542,7 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 		CategoryID  int       `db:"category_id"`
 		CreatedAt   time.Time `db:"created_at"`
 		UpdatedAt   time.Time `db:"updated_at"`
+		ParentId    int       `db:"parent_id"`
 
 		CategoryName string `db:"category_name"`
 		ParentName   string `db:"parent_name"`
@@ -559,7 +560,7 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 
 		err := dbx.Select(&items,
 			"SELECT "+
-				" items.id, seller_id, status, name, price, image_name, category_id, items.created_at, "+
+				" items.id, parent_id, seller_id, status, name, price, image_name, category_id, items.created_at, "+
 				" category_id, category_name, parent_name, seller_id, account_name, num_sell_items "+
 				"FROM items "+
 				" LEFT JOIN `users` ON items.seller_id = users.id "+
@@ -584,7 +585,7 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 		// TODO statusとcreated_atにindex貼ってるか
 		err := dbx.Select(&items,
 			"SELECT "+
-				" items.id, seller_id, status, name, price, image_name, category_id, items.created_at, "+
+				" items.id, parent_id, seller_id, status, name, price, image_name, category_id, items.created_at, "+
 				" category_id, category_name, parent_name, seller_id, account_name, num_sell_items "+
 				"FROM items "+
 				"LEFT JOIN users ON items.seller_id = users.id "+
@@ -618,6 +619,7 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 			Category: &Category{
 				ID:                 item.CategoryID,
 				CategoryName:       item.CategoryName,
+				ParentID: 			item.ParentId,
 				ParentCategoryName: item.ParentName,
 			},
 			Seller: &UserSimple{
