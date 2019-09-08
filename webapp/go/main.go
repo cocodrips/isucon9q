@@ -619,7 +619,7 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 			Category: &Category{
 				ID:                 item.CategoryID,
 				CategoryName:       item.CategoryName,
-				ParentID: 			item.ParentId,
+				ParentID:           item.ParentId,
 				ParentCategoryName: item.ParentName,
 			},
 			Seller: &UserSimple{
@@ -1082,7 +1082,7 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// shippingStatusが doneのときは叩かない
-		if item.ReserveID != nil || !(item.ShippingStatus != nil && *item.ShippingStatus == ShippingsStatusDone) {
+		if item.ReserveID != nil && !(item.ShippingStatus != nil && *item.ShippingStatus == ShippingsStatusDone) {
 			start := time.Now()
 			ssr, err := APIShipmentStatus(getShipmentServiceURL(), &APIShipmentStatusReq{
 				ReserveID: *item.ReserveID,
