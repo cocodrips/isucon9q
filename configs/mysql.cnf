@@ -105,5 +105,5 @@ max_binlog_size   = 100M
 # ssl-key=/etc/mysql/server-key.pem
 #
 innodb_flush_log_at_trx_commit = 2
-innodb_buffer_pool_size = 3.2GB
+innodb_buffer_pool_size = 3G
 innodb_flush_method = O_DIRECT
