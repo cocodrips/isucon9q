@@ -1,7 +1,6 @@
 - name: deploy
   hosts: all
   remote_user: isucon
-
   tasks:
     - name: pull repository
       shell: |
@@ -13,27 +12,37 @@
       environment:
         - BRANCH: "{{ branch }}"
 
-    # Update configs
-    - name: replace nginx conf
+    - name: copy api unit files
       become: true
       copy:
-        src: ../configs/isucari.conf
-        dest: /etc/nginx/sites-available/isucari.conf
+        src: ../configs/isucari.golang.service
+        dest: /etc/systemd/system/isucari.golang.service
 
+- hosts: db
+  remote_user: isucon
+  tasks:
     - name: replace mysql conf
       become: true
       copy:
         src: ../configs/mysql.cnf
         dest: /etc/mysql/mysql.conf.d/mysqld.cnf
 
-    # Restart service
     - name: restart mysql
       become: true
       systemd:
-          name: mysql.service
-          state: restarted
-          daemon_reload: yes
-          enabled: yes
+        name: mysql.service
+        state: restarted
+        daemon_reload: yes
+        enabled: yes
+
+- hosts: web
+  remote_user: isucon
+  tasks:
+    - name: replace nginx conf
+      become: true
+      copy:
+        src: ../configs/isucari.conf
+        dest: /etc/nginx/sites-available/isucari.conf
 
     - name: restart nginx
       become: true
@@ -43,6 +52,9 @@
           daemon_reload: yes
           enabled: yes
 
+- hosts: api
+  remote_user: isucon
+  tasks:
     - name: restart service
       become: true
       systemd:
@@ -50,4 +62,3 @@
           state: restarted
           daemon_reload: yes
           enabled: yes
-
