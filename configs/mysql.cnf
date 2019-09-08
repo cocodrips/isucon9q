@@ -40,7 +40,7 @@ skip-external-locking
 #
 # Instead of skip-networking the default is now to listen only on
 # localhost which is more compatible and is not less secure.
-bind-address            = 127.0.0.1
+# bind-address            = 127.0.0.1
 #
 # * Fine Tuning
 #
@@ -105,4 +105,5 @@ max_binlog_size   = 100M
 # ssl-key=/etc/mysql/server-key.pem
 #
 innodb_flush_log_at_trx_commit = 2
-innodb_buffer_pool_size = 1GB
+innodb_buffer_pool_size = 3.2GB
+innodb_flush_method = O_DIRECT
