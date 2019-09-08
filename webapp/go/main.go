@@ -621,10 +621,10 @@ func getNewItems(w http.ResponseWriter, r *http.Request) {
 				CategoryName:       item.CategoryName,
 				ParentCategoryName: item.ParentName,
 			},
-			Seller: &UserSimple {
-				ID           : item.SellerID,
-				AccountName  : item.AccountName,
-				NumSellItems : item.NumSellItems,
+			Seller: &UserSimple{
+				ID:           item.SellerID,
+				AccountName:  item.AccountName,
+				NumSellItems: item.NumSellItems,
 			},
 		})
 	}
@@ -930,8 +930,8 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		CreatedAt                 time.Time `db:"created_at"`
 		SellerName                string    `db:"seller_name"`
 		SellerNumItems            int       `db:"seller_num_items"`
-		BuyerName                 string    `db:"buyer_name"`
-		BuyerNumItems             int       `db:"buyer_num_items"`
+		BuyerName                 *string   `db:"buyer_name"`
+		BuyerNumItems             *int      `db:"buyer_num_items"`
 		TransactionEvidenceID     int64     `db:"transaction_evidence_id,omitempty"`
 		TransactionEvidenceStatus string    `db:"transaction_evidence_status,omitempty"`
 		ShippingStatus            string    `db:"shipping_status,omitempty"`
@@ -1035,8 +1035,8 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 		if item.BuyerID != 0 {
 			buyer = &UserSimple{
 				ID:           item.BuyerID,
-				AccountName:  item.BuyerName,
-				NumSellItems: item.BuyerNumItems,
+				AccountName:  *item.BuyerName,
+				NumSellItems: *item.BuyerNumItems,
 			}
 		}
 
