@@ -1943,18 +1943,22 @@ func postComplete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ssr, err := APIShipmentStatus(getShipmentServiceURL(), &APIShipmentStatusReq{
-		ReserveID: shipping.ReserveID,
-	})
-	if err != nil {
-		log.Print(err)
-		outputErrorMsg(w, http.StatusInternalServerError, "failed to request to shipment service")
-		tx.Rollback()
+	shipStatus := ShippingsStatusDone
+	if shipping.Status != ShippingsStatusDone {
+		ssr, err := APIShipmentStatus(getShipmentServiceURL(), &APIShipmentStatusReq{
+			ReserveID: shipping.ReserveID,
+		})
+		if err != nil {
+			log.Print(err)
+			outputErrorMsg(w, http.StatusInternalServerError, "failed to request to shipment service")
+			tx.Rollback()
 
-		return
+			return
+		}
+		shipStatus = ssr.Status
 	}
 
-	if !(ssr.Status == ShippingsStatusDone) {
+	if !(shipStatus == ShippingsStatusDone) {
 		outputErrorMsg(w, http.StatusBadRequest, "shipment service側で配送完了になっていません")
 		tx.Rollback()
 		return
