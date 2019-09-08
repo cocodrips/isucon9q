@@ -41,6 +41,10 @@ skip-external-locking
 # Instead of skip-networking the default is now to listen only on
 # localhost which is more compatible and is not less secure.
 bind-address            = 127.0.0.1
+bind-address            = 172.24.251.63
+bind-address            = 172.24.251.64
+bind-address            = 172.24.251.65
+
 #
 # * Fine Tuning
 #
