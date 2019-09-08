@@ -13,3 +13,4 @@ FROM (SELECT
       FROM categories) AS t3 LEFT JOIN categories ON t3.parent_id = categories.id);
 
 ALTER TABLE category_flatten ADD PRIMARY KEY(id);
+Update category_flatten set parent_id = 0 where parent_id IS NULL;
