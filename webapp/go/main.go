@@ -1028,7 +1028,8 @@ func getTransactions(w http.ResponseWriter, r *http.Request) {
 	itemDetails := []*ItemDetail{}
 	eg := errgroup.Group{}
 
-	for _, item := range itemJoinedDetails {
+	for i := range itemJoinedDetails {
+		item := itemJoinedDetails[i]
 		category, err := getCategoryByID(tx, item.CategoryID)
 		if err != nil {
 			outputErrorMsg(w, http.StatusNotFound, "category not found")
@@ -1507,8 +1508,6 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 	end := time.Now()
 	fmt.Printf("APIShipmentCreate %f秒\n", (end.Sub(start)).Seconds())
 
-
-
 	start = time.Now()
 	pstr, err := APIPaymentToken(getPaymentServiceURL(), &APIPaymentServiceTokenReq{
 		ShopID: PaymentServiceIsucariShopID,
@@ -1526,7 +1525,6 @@ func postBuy(w http.ResponseWriter, r *http.Request) {
 
 	end = time.Now()
 	fmt.Printf("APIPaymentToken %f秒\n", (end.Sub(start)).Seconds())
-
 
 	if pstr.Status == "invalid" {
 		outputErrorMsg(w, http.StatusBadRequest, "カード情報に誤りがあります")
