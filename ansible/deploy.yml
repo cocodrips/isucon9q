@@ -12,6 +12,12 @@
       environment:
         - BRANCH: "{{ branch }}"
 
+    - name: build
+      shell: |
+        make all
+      args:
+        chdir: "{{ repository_root }}/webapp/go"
+
     - name: copy api unit files
       become: true
       copy:
